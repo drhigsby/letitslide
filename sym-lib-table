@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "letItSlide-rescue")(type "Legacy")(uri "${KIPRJMOD}/letItSlide-rescue.lib")(options "")(descr ""))
+)
