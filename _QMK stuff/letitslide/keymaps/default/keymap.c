@@ -15,47 +15,6 @@
  */
 #include QMK_KEYBOARD_H
 
-#include "analog.h"
-
-#define POT_TOLERANCE 50
-#define POT_PIN F0
-#include "print.h"
-
-int16_t max_pot_val = 1023;
-int16_t max_ticks = 50;
-int16_t ticks = 0;
-int16_t pot_oldVal = 0;
-int16_t pot_val    = 0;
-
-void matrix_init_user(void) {
-    analogReference(ADC_REF_POWER);
-    for (int i = 0; i<max_ticks;++i){
-        tap_code(KC_VOLD);
-    }
-    ticks = 0;
-}
-
-void matrix_scan_user(void){
-    pot_val   = (analogReadPin(POT_PIN));
-    // If there is a big enough change, then we need to do something
-    if (abs(pot_val - pot_oldVal) > POT_TOLERANCE) {
-        uprintf("Pot Val: %d",pot_val);
-        int num_ticks = ((float)pot_val/max_pot_val)*max_ticks;
-        int delta_ticks = num_ticks - ticks;
-        if (delta_ticks > 0) {
-            for (int i = 0; i<delta_ticks;++i){
-                tap_code(KC_VOLU);
-            }
-        } else {
-            for (int i = 0; i<abs(delta_ticks);++i){
-                tap_code(KC_VOLD);
-            }
-        }
-        ticks = num_ticks;
-        pot_oldVal = pot_val;
-    }
-}
-
 enum layers{
   _BASE,
   _NUMNAV,
@@ -65,12 +24,13 @@ enum layers{
 #define NUMNAV MO(_NUMNAV)
 #define FN MO(_FN)
 #define zzzz KC_TRNS
+#define PUSHSPIN LT(_NUMNAV, KC_BSPC)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT_625u(
-        KC_GESC, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_LBRC, KC_RBRC, KC_BSPC,
-        KC_TAB, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_ENT, 
-        KC_LSPO, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_RSPC, KC_UP, 
+        KC_GESC, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_LBRC, KC_RBRC, PUSHSPIN,
+        KC_TAB, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_ENT,
+        KC_LSPO, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_RSPC, KC_UP,
                 KC_LCTL, KC_LGUI, KC_LALT, KC_SPC, NUMNAV, FN, KC_LEFT, KC_DOWN, KC_RGHT
   ),
 
@@ -80,23 +40,37 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
            zzzz,    zzzz,  zzzz,    zzzz,   zzzz,    zzzz,    zzzz,    zzzz,    zzzz,    zzzz,    zzzz,    zzzz, KC_HOME,
                 zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, KC_PGUP, KC_END, KC_PGDN
   ),
-     
+
     [_FN] = LAYOUT_625u(
-        zzzz, KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12, zzzz, 
-        zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, 
-        zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, 
+        zzzz, KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12, zzzz,
+        zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz,
+        zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz,
         zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz, zzzz
   )
 
 };
 
-bool encoder_update_user(uint8_t index, bool clockwise) {
-    if (index == 0) {
-        if (clockwise) {
-            tap_code(KC_PGUP);
-        } else {
-            tap_code(KC_PGDN);
+#ifdef ENCODER_ENABLE
+    bool encoder_update_user(uint8_t index, bool clockwise) {
+        if (index == 0) {
+            switch (biton32(layer_state))
+            {
+                case _BASE:
+                    clockwise ? tap_code(KC_PGUP) : tap_code(KC_PGDN);
+                    break;
+                case _NUMNAV:
+                    //Word selection
+                    register_code(KC_LSFT);
+                    register_code(KC_LCTRL);
+                    clockwise ? tap_code(KC_RGHT) : tap_code(KC_LEFT);
+                    unregister_code(KC_LSFT);
+                    unregister_code(KC_LCTRL);
+                    break;
+                case _FN:
+                    clockwise ? tap_code(KC_VOLU) : tap_code(KC_VOLD);
+                    break;
+            }
         }
+        return true;
     }
-    return true;
-}
+#endif
