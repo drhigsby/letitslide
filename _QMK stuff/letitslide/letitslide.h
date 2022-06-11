@@ -17,6 +17,8 @@
 
 #include "quantum.h"
 
+extern bool is_winos; //Controls slider volume behavior allowing toggle between Win & Mac
+
 #define LAYOUT_625u( \
     k000, k001, k002, k003, k004, k005, k006, k007, k008, k009, k010, k011, k012, k312,    \
     k100,   k101, k102, k103, k104, k105, k106, k107, k108, k109, k110, k111,     k112,     \

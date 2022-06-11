@@ -30,6 +30,7 @@ void matrix_init_user(void) {
 }
 
 void matrix_scan_user(void){
+    max_ticks = is_winos ? 50 : 17;
     int pot_val   = (analogReadPin(POT_PIN));
     int delta = pot_val - pot_oldVal;
     int margin = pot_val <= mid ?
