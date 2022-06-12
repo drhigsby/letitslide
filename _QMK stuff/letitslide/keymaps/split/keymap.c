@@ -15,11 +15,23 @@
  */
 #include QMK_KEYBOARD_H
 
+bool is_gui_tab_active = false; // ADD this near the begining of keymap.c
+bool is_winos = true; //Controls slider volume behavior allowing toggle between Win & Mac
+uint16_t gui_tab_timer = 0;     // we will be using them soon.
+uint16_t gui_tab_delay = 1000;  // amount of time to keep mod "held"
+
+enum my_keycodes {
+  PRVAPP = SAFE_RANGE,
+  NXTAPP,
+  VOLTOG
+};
+
 enum layers{
   _BASE,
   _NUMNAV,
   _FN
 };
+
 
 #define NUMNAV MO(_NUMNAV)
 #define FN MO(_FN)
@@ -31,7 +43,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_GESC, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_LBRC, KC_RBRC, PUSHSPIN,
         KC_TAB, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_ENT,
         KC_LSPO, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_RSPC, KC_UP,
-        KC_LGUI, KC_LALT, KC_LCTL, KC_PGDN, NUMNAV, KC_SPC, KC_PGUP, FN, KC_RGUI, KC_LEFT, KC_DOWN, KC_RGHT
+        KC_LGUI, KC_LALT, KC_LCTL, KC_PGDN, NUMNAV, KC_SPC, KC_PGUP, FN, VOLTOG, KC_LEFT, KC_DOWN, KC_RGHT
   ),
 
     [_NUMNAV] = LAYOUT_225u_2u(
@@ -49,6 +61,59 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   )
 
 };
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  switch (keycode) {
+    case NXTAPP:
+      if (record->event.pressed) {
+        if (!is_gui_tab_active) {
+            is_gui_tab_active = true;
+            is_winos ? register_code(KC_LALT) : register_code(KC_LGUI);
+        }
+        gui_tab_timer = timer_read();
+        register_code(KC_TAB);
+      } else {
+        is_winos ? unregister_code(KC_LALT) : unregister_code(KC_LGUI);
+      }
+      return false; // Skip all further processing of this key
+    case PRVAPP:
+      if (record->event.pressed) {
+        if (!is_gui_tab_active) {
+            is_gui_tab_active = true;
+            is_winos ? register_code(KC_LALT) : register_code(KC_LGUI);
+        }
+        gui_tab_timer = timer_read();
+        register_code(KC_LSFT);
+        is_winos ? register_code(KC_TAB) : register_code(KC_GRAVE);
+      } else {
+        unregister_code(KC_LSFT);
+        if(is_winos) {
+            unregister_code(KC_TAB);
+            unregister_code(KC_LALT);
+        } else {
+            unregister_code(KC_GRAVE);
+            unregister_code(KC_LGUI);
+        }
+      }
+      return false; // Skip all further processing of this key
+    case VOLTOG:
+      if (record->event.pressed) {
+        is_winos = is_winos ? false : true;
+      }
+      return false; // Skip all further processing of this key
+    default:
+      return true; // Process all other keycodes normally
+  }
+}
+
+void matrix_scan_user(void) { // The very important timer.
+  if (is_gui_tab_active) {
+    if (timer_elapsed(gui_tab_timer) > 1000) {
+      unregister_code(KC_LGUI);
+      is_gui_tab_active = false;
+    }
+  }
+}
 
 #ifdef ENCODER_ENABLE
     bool encoder_update_user(uint8_t index, bool clockwise) {
