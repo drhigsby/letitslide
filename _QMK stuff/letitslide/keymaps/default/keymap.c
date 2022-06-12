@@ -97,10 +97,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       return false; // Skip all further processing of this key
     case VOLTOG:
       if (record->event.pressed) {
-        gui_tab_timer = timer_read();
-        if(timer_elapsed(gui_tab_timer) < 1000) {
-            is_winos = is_winos ? false : true;
-        }
+        is_winos = is_winos ? false : true;
       }
       return false; // Skip all further processing of this key
     default:
